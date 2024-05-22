@@ -1,0 +1,1 @@
+bash ./training/down.sh
