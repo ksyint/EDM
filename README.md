@@ -1,348 +1,322 @@
-# News: A nightly version of ControlNet 1.1 is released!
+# DiffSketcher: Text Guided Vector Sketch Synthesis through Latent Diffusion Models
 
-[ControlNet 1.1](https://github.com/lllyasviel/ControlNet-v1-1-nightly) is released. Those new models will be merged to this repo after we make sure that everything is good.
+[![NeurIPS](https://img.shields.io/badge/NeurIPS-2023-6420AA.svg)](https://openreview.net/attachment?id=CY1xatvEQj&name=pdf)
+[![ArXiv](https://img.shields.io/badge/arXiv-2306.14685-b31b1b.svg)](https://arxiv.org/abs/2306.14685)
+[![Website](https://img.shields.io/badge/Website-Gitpage-4CCD99)](https://ximinng.github.io/DiffSketcher-project/)
+[![Demo](https://img.shields.io/badge/Demo-Gradio-F6995C)](https://huggingface.co/spaces/SVGRender/DiffSketcher)
 
-# Below is ControlNet 1.0
+This repository contains our official implementation of the NeurIPS 2023 paper: DiffSketcher: Text Guided Vector Sketch
+Synthesis through Latent Diffusion Models, which can generate high-quality vector sketches based on text prompts.
 
-Official implementation of [Adding Conditional Control to Text-to-Image Diffusion Models](https://arxiv.org/abs/2302.05543).
+> Our Project Page: https://ximinng.github.io/DiffSketcher-project/
 
-ControlNet is a neural network structure to control diffusion models by adding extra conditions.
+![teaser1](./img/teaser1.png)
+![teaser2](./img/teaser2.png)
 
-![img](github_page/he.png)
+**DiffSketcher Rendering Process:**
 
-It copys the weights of neural network blocks into a "locked" copy and a "trainable" copy. 
+| <img src="./img/0.gif" style="width: 200px; height: 200px;">            | <img src="./img/1.gif" style="width: 200px; height: 200px;">                | <img src="./img/2.gif" style="width: 200px; height: 200px;"> |
+|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|--------------------------------------------------------------|
+| Prompt: Macaw full color, ultra detailed, realistic, insanely beautiful | Prompt: Very detailed masterpiece painting of baby yoda hoding a lightsaber | Prompt: Sailboat sailing in the sea on a clear day           |
 
-The "trainable" one learns your condition. The "locked" one preserves your model. 
+## :new: Update
 
-Thanks to this, training with small dataset of image pairs will not destroy the production-ready diffusion models.
+- [01/2024] 🔥 **We released the [SVGDreamer](https://ximinng.github.io/SVGDreamer-project/). SVGDreamer is
+  a novel text-guided vector graphics synthesis method. This method considers both the editing of vector graphics and
+  the quality of the synthesis.**
+- [12/2023] 🔥 **We released the [PyTorch-SVGRender](https://github.com/ximinng/PyTorch-SVGRender). Pytorch-SVGRender is
+  the go-to library for state-of-the-art differentiable rendering methods for image vectorization.**
+- [11/2023] We thank [@camenduru](https://github.com/camenduru) for implementing
+  the [DiffSketcher-colab](https://github.com/camenduru/DiffSketcher-colab).
+- [10/2023] We released the DiffSketcher code.
+- [10/2023] We released the [VectorFusion code](https://github.com/ximinng/VectorFusion-pytorch).
 
-The "zero convolution" is 1×1 convolution with both weight and bias initialized as zeros. 
+## :wrench: Installation
 
-Before training, all zero convolutions output zeros, and ControlNet will not cause any distortion.
+### Step by step
 
-No layer is trained from scratch. You are still fine-tuning. Your original model is safe. 
+Create a new conda environment:
 
-This allows training on small-scale or even personal devices.
+```shell
+conda create --name diffsketcher python=3.10
+conda activate diffsketcher
+```
 
-This is also friendly to merge/replacement/offsetting of models/weights/blocks/layers.
+Install pytorch and the following libraries:
 
-### FAQ
+```shell
+conda install pytorch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 pytorch-cuda=11.6 -c pytorch -c nvidia
+pip install omegaconf BeautifulSoup4
+pip install opencv-python scikit-image matplotlib visdom wandb
+pip install triton numba
+pip install numpy scipy timm scikit-fmm einops
+pip install accelerate transformers safetensors datasets
+```
 
-**Q:** But wait, if the weight of a conv layer is zero, the gradient will also be zero, and the network will not learn anything. Why "zero convolution" works?
+Install CLIP:
 
-**A:** This is not true. [See an explanation here](docs/faq.md).
+```shell
+pip install ftfy regex tqdm
+pip install git+https://github.com/openai/CLIP.git
+```
 
-# Stable Diffusion + ControlNet
+Install diffusers:
 
-By repeating the above simple structure 14 times, we can control stable diffusion in this way:
+```shell
+pip install diffusers==0.20.2
+```
 
-![img](github_page/sd.png)
+Install xformers (require `python=3.10`):
 
-In this way, the ControlNet can **reuse** the SD encoder as a **deep, strong, robust, and powerful backbone** to learn diverse controls. Many evidences (like [this](https://jerryxu.net/ODISE/) and [this](https://vpd.ivg-research.xyz/)) validate that the SD encoder is an excellent backbone.
+```shell
+conda install xformers -c xformers
+```
 
-Note that the way we connect layers is computational efficient. The original SD encoder does not need to store gradients (the locked original SD Encoder Block 1234 and Middle). The required GPU memory is not much larger than original SD, although many layers are added. Great!
+Install diffvg:
 
-# Features & News
+```shell
+git clone https://github.com/BachiLi/diffvg.git
+cd diffvg
+git submodule update --init --recursive
+conda install -y -c anaconda cmake
+conda install -y -c conda-forge ffmpeg
+pip install svgwrite svgpathtools cssutils torch-tools
+python setup.py install
+```
 
-2023/0/14 - We released [ControlNet 1.1](https://github.com/lllyasviel/ControlNet-v1-1-nightly). Those new models will be merged to this repo after we make sure that everything is good.
+### Docker Usage
 
-2023/03/03 - We released a discussion - [Precomputed ControlNet: Speed up ControlNet by 45%, but is it necessary?](https://github.com/lllyasviel/ControlNet/discussions/216)
+```shell
+docker run --name diffsketcher --gpus all -it --ipc=host ximingxing/svgrender:v1 /bin/bash
+```
 
-2023/02/26 - We released a blog - [Ablation Study: Why ControlNets use deep encoder? What if it was lighter? Or even an MLP?](https://github.com/lllyasviel/ControlNet/discussions/188)
+## 🔥 Quickstart
 
-2023/02/20 - Implementation for non-prompt mode released. See also [Guess Mode / Non-Prompt Mode](#guess-anchor).
+### Case: Sydney Opera House
 
-2023/02/12 - Now you can play with any community model by [Transferring the ControlNet](https://github.com/lllyasviel/ControlNet/discussions/12).
+**Preview:**
 
-2023/02/11 - [Low VRAM mode](docs/low_vram.md) is added. Please use this mode if you are using 8GB GPU(s) or if you want larger batch size.
+|                                    Attention Map                                     |                                   Control Points Init                                   |                                Strokes Initialization                                 |                                        100 step                                         |                                          500 step                                           |
+|:------------------------------------------------------------------------------------:|:---------------------------------------------------------------------------------------:|:-------------------------------------------------------------------------------------:|:---------------------------------------------------------------------------------------:|:-------------------------------------------------------------------------------------------:|
+| <img src="./img/SydneyOperaHouse/attn-map.png" style="width: 200px; height: 200px;"> | <img src="./img/SydneyOperaHouse/points-init.png" style="width: 200px; height: 200px;"> | <img src="./img/SydneyOperaHouse/svg_iter0.svg" style="width: 200px; height: 200px;"> | <img src="./img/SydneyOperaHouse/svg_iter100.svg" style="width: 200px; height: 200px;"> | <img src="./img/SydneyOperaHouse/visual_best_96P.svg" style="width: 200px; height: 200px;"> |
+
+**From the abstract to the concrete:**
+
+|                        16 Paths                        |                        36 Paths                        |                        48 Paths                        |                        96 Paths                        |                        128 Paths                        |
+|:------------------------------------------------------:|:------------------------------------------------------:|:------------------------------------------------------:|:------------------------------------------------------:|:-------------------------------------------------------:|
+| <img src="./img/SydneyOperaHouse/visual_best_16P.svg"> | <img src="./img/SydneyOperaHouse/visual_best_36P.svg"> | <img src="./img/SydneyOperaHouse/visual_best_48P.svg"> | <img src="./img/SydneyOperaHouse/visual_best_96P.svg"> | <img src="./img/SydneyOperaHouse/visual_best_128P.svg"> |
+
+**Script:**
+
+```shell
+python run_painterly_render.py \
+  -c diffsketcher.yaml \
+  -eval_step 10 -save_step 10 \
+  -update "token_ind=4 num_paths=96 num_iter=800" \
+  -pt "a photo of Sydney opera house" \
+  -respath ./workdir/sydney_opera_house \
+  -d 8019 \
+  --download
+```
+
+- `-c` a.k.a `--config`: configuration file, saving in `DiffSketcher/config/`.
+- `-eval_step`: the step size used to eval the method (**too frequent calls will result in longer times**).
+- `-save_step`: the step size used to save the result (**too frequent calls will result in longer times**).
+- `-update`: a tool for editing the hyper-params of the configuration file, so you don't need to create a new yaml.
+- `-pt` a.k.a `--prompt`: text prompt.
+- `-respath` a.k.a `--results_path`: the folder to save results.
+- `-d` a.k.a `--seed`: random seed.
+- `--download`: download models from huggingface automatically **when you first run them**.
+
+**crucial:**
+
+- `-update "token_ind=4"` indicates the index of cross-attn maps to init strokes.
+- `-update "num_paths=96"` indicates the number of strokes.
+
+**optional:**
+
+- `-npt`, a.k.a `--negative_prompt`: negative text prompt.
+- `-mv`, a.k.a `--make_video`: make a video of the rendering process (**it will take much longer**).
+- `-frame_freq`, a.k.a `--video_frame_freq`: the interval of the number of steps to save the image.
+- `-framerate`, a.k.a `--video_frame_rate`: control the playback speed of the output video.
+- **Note:** [Download](https://huggingface.co/akhaliq/CLIPasso/blob/main/u2net.pth) U2Net model and place
+  in `checkpoint/` dir if `xdog_intersec=True`
+- add `enable_xformers=True` in `-update` to enable xformers for speeding up.
+- add `gradient_checkpoint=True` in `-update` to use gradient checkpoint for low VRAM.
+
+### Case: Sydney Opera House in ink painting style
+
+**Preview:**
+
+| <img src="./img/SydneyOperaHouse-ink/svg_iter0.svg"> | <img src="./img/SydneyOperaHouse-ink/svg_iter100.svg"> | <img src="./img/SydneyOperaHouse-ink/svg_iter200.svg"> | <img src="./img/SydneyOperaHouse-ink/visual_best.svg"> |
+|------------------------------------------------------|--------------------------------------------------------|--------------------------------------------------------|--------------------------------------------------------|
+| Strokes Initialization                               | 100 step                                               | 200 step                                               | 990 step                                               |
+
+**Script:**
+
+```shell
+python run_painterly_render.py \
+  -c diffsketcher-width.yaml \
+  -eval_step 10 -save_step 10 \
+  -update "token_ind=4 num_paths=48 num_iter=800" \
+  -pt "a photo of Sydney opera house" \
+  -respath ./workdir/sydney_opera_house_ink \
+  -d 8019 \
+  --download
+```
+
+### Oil Painting
+
+**Preview:**
+
+| <img src="./img/LatinWomanPortrait/svg_iter0.svg"> | <img src="./img/LatinWomanPortrait/svg_iter100.svg"> | <img src="./img/LatinWomanPortrait/visual_best.svg"> |
+|----------------------------------------------------|------------------------------------------------------|------------------------------------------------------|
+| Strokes Initialization                             | 100 step                                             | 570 step                                             |
+
+**Script:**
+
+```shell
+python run_painterly_render.py \
+  -c diffsketcher-color.yaml \
+  -eval_step 10 -save_step 10 \
+  -update "token_ind=5 num_paths=1000 num_iter=1000 guidance_scale=7.5" \
+  -pt "portrait of latin woman having a spiritual awaking, eyes closed, slight smile, illuminating lights, oil painting, by Van Gogh" \
+  -npt "text, signature, title, heading, watermark, ugly, duplicate, morbid, mutilated, out of frame, extra fingers, mutated hands, poorly drawn hands, poorly drawn face, mutation, deformed, blurry, bad anatomy, bad proportions, extra limbs, cloned face, disfigured, out of frame, ugly, extra limbs, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, mutated hands, fused fingers, too many fingers, long neck" \
+  -respath ./workdir/latin_woman_portrait -d 58548
+```
+
+**Preview:**
+
+| <img src="./img/WomanWithCrown/svg_iter0.svg"> | <img src="./img/WomanWithCrown/svg_iter100.svg"> | <img src="./img/WomanWithCrown/visual_best.svg"> |
+|------------------------------------------------|--------------------------------------------------|--------------------------------------------------|
+| Strokes Initialization                         | 100 step                                         | 570 step                                         |
+
+**Script:**
+
+```shell
+python run_painterly_render.py \
+  -c diffsketcher-color.yaml \
+  -eval_step 10 -save_step 10 \
+  -update "token_ind=5 num_paths=1000 num_iter=1000 guidance_scale=7.5" \
+  -pt "a painting of a woman with a crown on her head, art station front page, dynamic portrait style, many colors in the background, olpntng style, oil painting, forbidden beauty" \
+  -npt "2 heads, 2 faces, cropped image, out of frame, draft, deformed hands, twisted fingers, double image, malformed hands, multiple heads, extra limb, ugly, poorly drawn hands, missing limb, disfigured, cut-off, ugly, grain, low-res, Deformed, blurry, bad anatomy, disfigured, poorly drawn face, mutation, mutated, floating limbs, disconnected limbs, disgusting, poorly drawn, mutilated, mangled, extra fingers, duplicate artifacts, morbid, gross proportions, missing arms, mutated hands, mutilated hands, cloned face, malformed, blur haze" \
+  -respath ./workdir/woman_with_crown -d 178351
+```
+
+**Preview:**
+
+| <img src="./img/BeautifulGirl_OilPainting/svg_iter0.svg"> | <img src="./img/BeautifulGirl_OilPainting/svg_iter100.svg"> | <img src="./img/BeautifulGirl_OilPainting/visual_best.svg"> |
+|-----------------------------------------------------------|-------------------------------------------------------------|-------------------------------------------------------------|
+| Strokes Initialization                                    | 100 step                                                    | 420 step                                                    |
 
-# Production-Ready Pretrained Models
+**Script:**
 
-First create a new conda environment
-
-    conda env create -f environment.yaml
-    conda activate control
-
-All models and detectors can be downloaded from [our Hugging Face page](https://huggingface.co/lllyasviel/ControlNet). Make sure that SD models are put in "ControlNet/models" and detectors are put in "ControlNet/annotator/ckpts". Make sure that you download all necessary pretrained weights and detector models from that Hugging Face page, including HED edge detection model, Midas depth estimation model, Openpose, and so on. 
-
-We provide 9 Gradio apps with these models.
-
-All test images can be found at the folder "test_imgs".
-
-## ControlNet with Canny Edge
-
-Stable Diffusion 1.5 + ControlNet (using simple Canny edge detection)
-
-    python gradio_canny2image.py
-
-The Gradio app also allows you to change the Canny edge thresholds. Just try it for more details.
-
-Prompt: "bird"
-![p](github_page/p1.png)
-
-Prompt: "cute dog"
-![p](github_page/p2.png)
-
-## ControlNet with M-LSD Lines
-
-Stable Diffusion 1.5 + ControlNet (using simple M-LSD straight line detection)
-
-    python gradio_hough2image.py
-
-The Gradio app also allows you to change the M-LSD thresholds. Just try it for more details.
-
-Prompt: "room"
-![p](github_page/p3.png)
-
-Prompt: "building"
-![p](github_page/p4.png)
-
-## ControlNet with HED Boundary
-
-Stable Diffusion 1.5 + ControlNet (using soft HED Boundary)
-
-    python gradio_hed2image.py
-
-The soft HED Boundary will preserve many details in input images, making this app suitable for recoloring and stylizing. Just try it for more details.
-
-Prompt: "oil painting of handsome old man, masterpiece"
-![p](github_page/p5.png)
-
-Prompt: "Cyberpunk robot"
-![p](github_page/p6.png)
-
-## ControlNet with User Scribbles
-
-Stable Diffusion 1.5 + ControlNet (using Scribbles)
-
-    python gradio_scribble2image.py
-
-Note that the UI is based on Gradio, and Gradio is somewhat difficult to customize. Right now you need to draw scribbles outside the UI (using your favorite drawing software, for example, MS Paint) and then import the scribble image to Gradio. 
-
-Prompt: "turtle"
-![p](github_page/p7.png)
-
-Prompt: "hot air balloon"
-![p](github_page/p8.png)
-
-### Interactive Interface
-
-We actually provide an interactive interface
-
-    python gradio_scribble2image_interactive.py
-
-~~However, because gradio is very [buggy](https://github.com/gradio-app/gradio/issues/3166) and difficult to customize, right now, user need to first set canvas width and heights and then click "Open drawing canvas" to get a drawing area. Please do not upload image to that drawing canvas. Also, the drawing area is very small; it should be bigger. But I failed to find out how to make it larger. Again, gradio is really buggy.~~ (Now fixed, will update asap)
-
-The below dog sketch is drawn by me. Perhaps we should draw a better dog for showcase.
-
-Prompt: "dog in a room"
-![p](github_page/p20.png)
-
-## ControlNet with Fake Scribbles
-
-Stable Diffusion 1.5 + ControlNet (using fake scribbles)
-
-    python gradio_fake_scribble2image.py
-
-Sometimes we are lazy, and we do not want to draw scribbles. This script use the exactly same scribble-based model but use a simple algorithm to synthesize scribbles from input images.
-
-Prompt: "bag"
-![p](github_page/p9.png)
-
-Prompt: "shose" (Note that "shose" is a typo; it should be "shoes". But it still seems to work.)
-![p](github_page/p10.png)
-
-## ControlNet with Human Pose
-
-Stable Diffusion 1.5 + ControlNet (using human pose)
-
-    python gradio_pose2image.py
-
-Apparently, this model deserves a better UI to directly manipulate pose skeleton. However, again, Gradio is somewhat difficult to customize. Right now you need to input an image and then the Openpose will detect the pose for you.
-
-Prompt: "Chief in the kitchen"
-![p](github_page/p11.png)
-
-Prompt: "An astronaut on the moon"
-![p](github_page/p12.png)
-
-## ControlNet with Semantic Segmentation
-
-Stable Diffusion 1.5 + ControlNet (using semantic segmentation)
-
-    python gradio_seg2image.py
-
-This model use ADE20K's segmentation protocol. Again, this model deserves a better UI to directly draw the segmentations. However, again, Gradio is somewhat difficult to customize. Right now you need to input an image and then a model called Uniformer will detect the segmentations for you. Just try it for more details.
-
-Prompt: "House"
-![p](github_page/p13.png)
-
-Prompt: "River"
-![p](github_page/p14.png)
-
-## ControlNet with Depth
-
-Stable Diffusion 1.5 + ControlNet (using depth map)
-
-    python gradio_depth2image.py
-
-Great! Now SD 1.5 also have a depth control. FINALLY. So many possibilities (considering SD1.5 has much more community models than SD2).
-
-Note that different from Stability's model, the ControlNet receive the full 512×512 depth map, rather than 64×64 depth. Note that Stability's SD2 depth model use 64*64 depth maps. This means that the ControlNet will preserve more details in the depth map.
-
-This is always a strength because if users do not want to preserve more details, they can simply use another SD to post-process an i2i. But if they want to preserve more details, ControlNet becomes their only choice. Again, SD2 uses 64×64 depth, we use 512×512.
-
-Prompt: "Stormtrooper's lecture"
-![p](github_page/p15.png)
-
-## ControlNet with Normal Map
-
-Stable Diffusion 1.5 + ControlNet (using normal map)
-
-    python gradio_normal2image.py
-
-This model use normal map. Rightnow in the APP, the normal is computed from the midas depth map and a user threshold (to determine how many area is background with identity normal face to viewer, tune the "Normal background threshold" in the gradio app to get a feeling).
-
-Prompt: "Cute toy"
-![p](github_page/p17.png)
-
-Prompt: "Plaster statue of Abraham Lincoln"
-![p](github_page/p18.png)
-
-Compared to depth model, this model seems to be a bit better at preserving the geometry. This is intuitive: minor details are not salient in depth maps, but are salient in normal maps. Below is the depth result with same inputs. You can see that the hairstyle of the man in the input image is modified by depth model, but preserved by the normal model. 
-
-Prompt: "Plaster statue of Abraham Lincoln"
-![p](github_page/p19.png)
-
-## ControlNet with Anime Line Drawing
-
-We also trained a relatively simple ControlNet for anime line drawings. This tool may be useful for artistic creations. (Although the image details in the results is a bit modified, since it still diffuse latent images.)
-
-This model is not available right now. We need to evaluate the potential risks before releasing this model. Nevertheless, you may be interested in [transferring the ControlNet to any community model](https://github.com/lllyasviel/ControlNet/discussions/12).
-
-![p](github_page/p21.png)
-
-<a id="guess-anchor"></a>
-
-# Guess Mode / Non-Prompt Mode
-
-The "guess mode" (or called non-prompt mode) will completely unleash all the power of the very powerful ControlNet encoder. 
-
-See also the blog - [Ablation Study: Why ControlNets use deep encoder? What if it was lighter? Or even an MLP?](https://github.com/lllyasviel/ControlNet/discussions/188)
-
-You need to manually check the "Guess Mode" toggle to enable this mode.
-
-In this mode, the ControlNet encoder will try best to recognize the content of the input control map, like depth map, edge map, scribbles, etc, even if you remove all prompts.
-
-**Let's have fun with some very challenging experimental settings!**
-
-**No prompts. No "positive" prompts. No "negative" prompts. No extra caption detector. One single diffusion loop.**
-
-For this mode, we recommend to use 50 steps and guidance scale between 3 and 5.
-
-![p](github_page/uc2a.png)
-
-No prompts:
-
-![p](github_page/uc2b.png)
-
-Note that the below example is 768×768. No prompts. No "positive" prompts. No "negative" prompts.
-
-![p](github_page/uc1.png)
-
-By tuning the parameters, you can get some very intereting results like below:
-
-![p](github_page/uc3.png)
-
-Because no prompt is available, the ControlNet encoder will "guess" what is in the control map. Sometimes the guess result is really interesting. Because diffusion algorithm can essentially give multiple results, the ControlNet seems able to give multiple guesses, like this:
-
-![p](github_page/uc4.png)
-
-Without prompt, the HED seems good at generating images look like paintings when the control strength is relatively low:
-
-![p](github_page/uc6.png)
-
-The Guess Mode is also supported in [WebUI Plugin](https://github.com/Mikubill/sd-webui-controlnet):
-
-![p](github_page/uci1.png)
-
-No prompts. Default WebUI parameters. Pure random results with the seed being 12345. Standard SD1.5. Input scribble is in "test_imgs" folder to reproduce.
-
-![p](github_page/uci2.png)
-
-Below is another challenging example:
-
-![p](github_page/uci3.png)
-
-No prompts. Default WebUI parameters. Pure random results with the seed being 12345. Standard SD1.5. Input scribble is in "test_imgs" folder to reproduce.
-
-![p](github_page/uci4.png)
-
-Note that in the guess mode, you will still be able to input prompts. The only difference is that the model will "try harder" to guess what is in the control map even if you do not provide the prompt. Just try it yourself!
-
-Besides, if you write some scripts (like BLIP) to generate image captions from the "guess mode" images, and then use the generated captions as prompts to diffuse again, you will get a SOTA pipeline for fully automatic conditional image generating.
-
-# Combining Multiple ControlNets
-
-ControlNets are composable: more than one ControlNet can be easily composed to multi-condition control.
-
-Right now this feature is in experimental stage in the [Mikubill' A1111 Webui Plugin](https://github.com/Mikubill/sd-webui-controlnet):
-
-![p](github_page/multi2.png)
-
-![p](github_page/multi.png)
-
-As long as the models are controlling the same SD, the "boundary" between different research projects does not even exist. This plugin also allows different methods to work together!
-
-# Use ControlNet in Any Community Model (SD1.X)
-
-This is an experimental feature.
-
-[See the steps here](https://github.com/lllyasviel/ControlNet/discussions/12).
-
-Or you may want to use the [Mikubill' A1111 Webui Plugin](https://github.com/Mikubill/sd-webui-controlnet) which is plug-and-play and does not need manual merging.
-
-# Annotate Your Own Data
-
-We provide simple python scripts to process images.
-
-[See a gradio example here](docs/annotator.md).
-
-# Train with Your Own Data
-
-Training a ControlNet is as easy as (or even easier than) training a simple pix2pix. 
-
-[See the steps here](docs/train.md).
-
-# Related Resources
-
-Special Thank to the great project - [Mikubill' A1111 Webui Plugin](https://github.com/Mikubill/sd-webui-controlnet) !
-
-We also thank Hysts for making [Hugging Face Space](https://huggingface.co/spaces/hysts/ControlNet) as well as more than 65 models in that amazing [Colab list](https://github.com/camenduru/controlnet-colab)! 
-
-Thank haofanwang for making [ControlNet-for-Diffusers](https://github.com/haofanwang/ControlNet-for-Diffusers)!
-
-We also thank all authors for making Controlnet DEMOs, including but not limited to [fffiloni](https://huggingface.co/spaces/fffiloni/ControlNet-Video), [other-model](https://huggingface.co/spaces/hysts/ControlNet-with-other-models), [ThereforeGames](https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/7784), [RamAnanth1](https://huggingface.co/spaces/RamAnanth1/ControlNet), etc!
-
-Besides, you may also want to read these amazing related works:
-
-[Composer: Creative and Controllable Image Synthesis with Composable Conditions](https://github.com/damo-vilab/composer): A much bigger model to control diffusion!
-
-[T2I-Adapter: Learning Adapters to Dig out More Controllable Ability for Text-to-Image Diffusion Models](https://github.com/TencentARC/T2I-Adapter): A much smaller model to control stable diffusion!
-
-[ControlLoRA: A Light Neural Network To Control Stable Diffusion Spatial Information](https://github.com/HighCWu/ControlLoRA): Implement Controlnet using LORA!
-
-And these amazing recent projects: [InstructPix2Pix Learning to Follow Image Editing Instructions](https://www.timothybrooks.com/instruct-pix2pix), [Pix2pix-zero: Zero-shot Image-to-Image Translation](https://github.com/pix2pixzero/pix2pix-zero), [Plug-and-Play Diffusion Features for Text-Driven Image-to-Image Translation](https://github.com/MichalGeyer/plug-and-play), [MaskSketch: Unpaired Structure-guided Masked Image Generation](https://arxiv.org/abs/2302.05496), [SEGA: Instructing Diffusion using Semantic Dimensions](https://arxiv.org/abs/2301.12247), [Universal Guidance for Diffusion Models](https://github.com/arpitbansal297/Universal-Guided-Diffusion), [Region-Aware Diffusion for Zero-shot Text-driven Image Editing](https://github.com/haha-lisa/RDM-Region-Aware-Diffusion-Model), [Domain Expansion of Image Generators](https://arxiv.org/abs/2301.05225), [Image Mixer](https://twitter.com/LambdaAPI/status/1626327289288957956), [MultiDiffusion: Fusing Diffusion Paths for Controlled Image Generation](https://multidiffusion.github.io/)
-
-# Citation
-
-    @misc{zhang2023adding,
-      title={Adding Conditional Control to Text-to-Image Diffusion Models}, 
-      author={Lvmin Zhang and Anyi Rao and Maneesh Agrawala},
-      booktitle={IEEE International Conference on Computer Vision (ICCV)}
-      year={2023},
-    }
-
-[Arxiv Link](https://arxiv.org/abs/2302.05543)
-
-[Supplementary Materials](https://lllyasviel.github.io/misc/202309/cnet_supp.pdf)
+```shell
+python run_painterly_render.py \
+  -c diffsketcher-color.yaml \
+  -eval_step 10 -save_step 10 \
+  -update "token_ind=5 num_paths=1000 num_iter=1000 guidance_scale=7.5" \
+  -pt "a painting of a woman with a crown on her head, art station front page, dynamic portrait style, many colors in the background, olpntng style, oil painting, forbidden beauty" \
+  -npt "2 heads, 2 faces, cropped image, out of frame, draft, deformed hands, twisted fingers, double image, malformed hands, multiple heads, extra limb, ugly, poorly drawn hands, missing limb, disfigured, cut-off, ugly, grain, low-res, Deformed, blurry, bad anatomy, disfigured, poorly drawn face, mutation, mutated, floating limbs, disconnected limbs, disgusting, poorly drawn, mutilated, mangled, extra fingers, duplicate artifacts, morbid, gross proportions, missing arms, mutated hands, mutilated hands, cloned face, malformed, blur haze" \
+  -respath ./workdir/woman_with_crown -d 178351
+```
+
+### Colorful Results
+
+**Preview:**
+
+| <img src="./img/castle-rgba/svg_iter0.svg"> | <img src="./img/castle-rgba/svg_iter100.svg"> | <img src="./img/castle-rgba/visual_best.svg"> |
+|---------------------------------------------|-----------------------------------------------|-----------------------------------------------|
+| Strokes Initialization                      | 100 step                                      | 340 step                                      |
+
+**Script:**
+
+```shell
+python run_painterly_render.py \
+  -c diffsketcher-color.yaml \
+  -eval_step 10 -save_step 10 \
+  -update "token_ind=5 num_paths=1000 num_iter=800 guidance_scale=7" \
+  -pt "a beautiful snow-covered castle, a stunning masterpiece, trees, rays of the sun, Leonid Afremov" \
+  -npt "poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, extra limbs, disfigured, deformed, body out of frame, bad anatomy, watermark, signature, cut off, low contrast, underexposed, overexposed, bad art, beginner, amateur, distorted face" \
+  -respath ./workdir/castle -d 370880
+```
+
+**Preview:**
+
+| <img src="./img/castle-rgba-2/svg_iter0.svg"> | <img src="./img/castle-rgba-2/svg_iter100.svg"> | <img src="./img/castle-rgba-2/visual_best.svg"> |
+|-----------------------------------------------|-------------------------------------------------|-------------------------------------------------|
+| Strokes Initialization                        | 100 step                                        | 850 step                                        |
+
+**Script:**
+
+```shell
+python run_painterly_render.py \
+  -c diffsketcher-color.yaml \
+  -eval_step 10 -save_step 10 \
+  -update "token_ind=5 num_paths=1000 num_iter=800 guidance_scale=7" \
+  -pt "a beautiful snow-covered castle, a stunning masterpiece, trees, rays of the sun, Leonid Afremov" \
+  -npt "poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, extra limbs, disfigured, deformed, body out of frame, bad anatomy, watermark, signature, cut off, low contrast, underexposed, overexposed, bad art, beginner, amateur, distorted face" \
+  -respath ./workdir/castle -d 478376
+```
+
+### DiffSketcher + Style Transfer
+
+**Preview:**
+
+| <img src="./img/FrenchRevolution-ST/generated.png" style="width: 250px; height: 250px;"> | <img src="./img/starry.jpg" style="width: 250px; height: 250px;"> | <img src="./img/FrenchRevolution-ST/french_ST.svg" style="width: 250px; height: 250px;"> |
+|------------------------------------------------------------------------------------------|-------------------------------------------------------------------|------------------------------------------------------------------------------------------|
+| Generated sample                                                                         | Style Image                                                       | Result                                                                                   |
+
+**Script:**
+
+```shell
+python run_painterly_render.py \
+  -tk style-diffsketcher -c diffsketcher-style.yaml \
+  -eval_step 10 -save_step 10 \
+  -update "token_ind=4 num_paths=2000 style_warmup=0 style_strength=1 softmax_temp=0.4 sds.grad_scale=0 lr_scheduler=True num_iter=2000" \
+  -pt "The French Revolution, highly detailed, 8k, ornate, intricate, cinematic, dehazed, atmospheric, oil painting, by Van Gogh" \
+  -style ./img/starry.jpg \
+  -respath ./workdir/style_transfer \
+  -d 876809
+```
+
+- `-style`: the path of style img place.
+- `style_warmup`:  add style loss after `style_warmup` step.
+- `style_strength`:  How strong the style should be. 100 (max) is a lot. 0 (min) is no style.
+
+### More Sketch Results
+
+**check the [Examples.md](https://github.com/ximinng/DiffSketcher/blob/main/Examples.md) for more cases.**
+
+### TODO
+
+- [x] Add a webUI demo.
+- [x] Add support for colorful results and oil painting.
+
+## :books: Acknowledgement
+
+The project is built based on the following repository:
+
+- [BachiLi/diffvg](https://github.com/BachiLi/diffvg)
+- [yael-vinker/CLIPasso](https://github.com/yael-vinker/CLIPasso)
+- [huggingface/diffusers](https://github.com/huggingface/diffusers)
+
+We gratefully thank the authors for their wonderful works.
+
+## :paperclip: Citation
+
+If you use this code for your research, please cite the following work:
+
+```
+@inproceedings{xing2023diffsketcher,
+    title={DiffSketcher: Text Guided Vector Sketch Synthesis through Latent Diffusion Models},
+    author={XiMing Xing and Chuang Wang and Haitao Zhou and Jing Zhang and Qian Yu and Dong Xu},
+    booktitle={Thirty-seventh Conference on Neural Information Processing Systems},
+    year={2023},
+    url={https://openreview.net/forum?id=CY1xatvEQj}
+}
+```
+
+## :copyright: Licence
+
+This work is licensed under a MIT License.
